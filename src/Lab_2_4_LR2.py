@@ -13,6 +13,8 @@ class LinearRegressor:
     def __init__(self):
         self.coefficients = None
         self.intercept = None
+        self.mse_evolution = None
+        self.param_evolution = None
 
     """
     This next "fit" function is a general function that either calls the *fit_multiple* code that
@@ -89,7 +91,9 @@ class LinearRegressor:
         m = len(y)
 
         self.coefficients = np.random.rand(X.shape[1] - 1) * 0.01  
-        self.intercept = np.random.rand() * 0.01  
+        self.intercept = np.random.rand() * 0.01
+        mse_evolution = []
+        param_evolution = []
 
         # Implement gradient descent
         for epoch in range(iterations):
@@ -99,17 +103,23 @@ class LinearRegressor:
             # Write the gradient values and the updates for the paramenters
             # Gradiente para el intercepto
             grad_intercept = (1 / m) * np.sum(error)
-            # Gradiente para los coeficientes (considerando las columnas sin bias)
+
+            # Gradiente para los coeficientes
             grad_coefficients = (1 / m) * np.dot(X[:, 1:].T, error)
 
             # Actualizar los parámetros
             self.intercept -= learning_rate * grad_intercept
             self.coefficients -= learning_rate * grad_coefficients
+            param_evolution.append(np.concatenate(([self.intercept], self.coefficients)))
 
             # Calculate and print the loss every 10 epochs
-            if epoch % 1000 == 0:
+            if epoch % 10 == 0:
                 mse = np.mean(error ** 2)
+                mse_evolution.append([mse, epoch])
                 print(f"Epoch {epoch}: MSE = {mse}")
+
+        self.mse_evolution = mse_evolution
+        self.param_evolution = param_evolution
 
     def predict(self, X):
         """
@@ -193,17 +203,16 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
         # Create a one-hot encoded matrix (np.array) for the current categorical column
         one_hot = np.zeros((X.shape[0], len(unique_values)))
         for i, value in enumerate(unique_values):
-            one_hot[:, i] = (categorical_column == value)  # Cambia los valores de la columna i por 1 si es igual a value
+            one_hot[:, i] = (categorical_column == value).astype(float)  # Cambia los valores de la columna i por 1 si es igual a value
         
         # Optionally drop the first level of one-hot encoding
         if drop_first:
             one_hot = one_hot[:, 1:]
 
         # Delete the original categorical column from X_transformed and insert new one-hot encoded columns
-        X_transformed = np.delete(X_transformed, index, axis=1)
-
-        # Agregar las columnas one-hot al final
-        X_transformed = np.hstack((one_hot, X_transformed))
+        left = X_transformed[:, :index]
+        right = X_transformed[:, index + 1 :]
+        X_transformed = np.hstack((left, one_hot, right))
 
 
     return X_transformed
